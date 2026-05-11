@@ -180,16 +180,16 @@ export async function getAssignmentsForEvaluator(
   // Step 3: filter to 2026 edition and collect linked submission IDs
   const submissionIds = new Set<string>();
   const filteredAssignments: AirtableRecord[] = [];
-  for (const a of assignmentMap.values()) {
+  Array.from(assignmentMap.values()).forEach((a) => {
     const editionLinks = arr(a.fields[F.assign_edition]);
-    if (!editionLinks.includes(EDITION_2026)) continue;
+    if (!editionLinks.includes(EDITION_2026)) return;
     filteredAssignments.push(a);
     const subLinks = arr(a.fields[F.assign_submission]);
     subLinks.forEach((id) => submissionIds.add(id));
-  }
+  });
 
   // Step 4: batch-fetch submissions
-  const submissions = await getSubmissionsByIds([...submissionIds]);
+  const submissions = await getSubmissionsByIds(Array.from(submissionIds));
 
   // Step 5: assemble
   const result: Assignment[] = [];
