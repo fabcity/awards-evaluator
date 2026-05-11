@@ -84,6 +84,9 @@ async function airtableFetch<T>(
 
 function selectName(value: unknown): string | null {
   if (!value) return null;
+  // Airtable REST returns singleSelect as a plain string by default
+  if (typeof value === 'string') return value;
+  // Some endpoints / params return the {id, name, color} object form
   if (typeof value === 'object' && value !== null && 'name' in value) {
     return (value as { name: string }).name;
   }
