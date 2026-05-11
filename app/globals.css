@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@300;400;500;600;700&family=Funnel+Display:wght@400;500;600;700;800&family=Mulish:wght@400;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Circular Std';
+  src: local('Circular Std'), local('CircularStd'), local('Circular');
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+html, body {
+  background: #F7F5F1;
+  color: #1E1E1E;
+  font-family: 'Funnel Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Circular Std', 'Funnel Display', 'Mulish', 'Funnel Sans', system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
