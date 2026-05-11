@@ -67,7 +67,7 @@ export default async function LandingPage({
 
       <footer className="px-8 py-4 border-t border-dark text-xs text-muted flex justify-between">
         <span>Fab City Foundation · 2026</span>
-        <span>v0.2 · auth + dashboard</span>
+        <span>v0.3 · scoring + submit</span>
       </footer>
     </main>
   );
