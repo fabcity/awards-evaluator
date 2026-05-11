@@ -36,7 +36,6 @@ const config: Config = {
           'sans-serif',
         ],
       },
-      // Flat design — no rounded corners (matches the prototype)
       borderRadius: {
         none: '0',
         sm: '0',
