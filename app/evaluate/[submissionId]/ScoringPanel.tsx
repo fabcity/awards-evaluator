@@ -114,6 +114,10 @@ export function ScoringPanel({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(evaluation.status === 'Submitted');
+  const [coiOpen, setCoiOpen] = useState(false);
+  const [coiReason, setCoiReason] = useState('');
+  const [coiSubmitting, setCoiSubmitting] = useState(false);
+  const [coiError, setCoiError] = useState<string | null>(null);
 
   const locked = submitted;
 
@@ -176,10 +180,34 @@ export function ScoringPanel({
     save('nominateThomasDuggan', checked);
   }
 
-  function flagCOI() {
-    alert(
-      'A COI flag will pause this evaluation and notify Josefina Nano (josefina@fab.city) for reassignment. (This action will be wired up in v0.4 — for now, please email Josefina directly.)'
-    );
+  function openCOI() {
+    setCoiError(null);
+    setCoiReason('');
+    setCoiOpen(true);
+  }
+
+  async function confirmCOI() {
+    setCoiSubmitting(true);
+    setCoiError(null);
+    try {
+      const res = await fetch('/api/assignments/coi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignmentId, reason: coiReason }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setCoiError(data.error || 'COI flag failed');
+        setCoiSubmitting(false);
+        return;
+      }
+      // Success — back to dashboard. The flagged assignment is filtered out
+      // server-side so it won't appear there anymore.
+      router.push('/dashboard');
+    } catch (e) {
+      setCoiError(e instanceof Error ? e.message : 'COI flag failed');
+      setCoiSubmitting(false);
+    }
   }
 
   async function submit() {
@@ -412,7 +440,7 @@ export function ScoringPanel({
 
       <div className="flex gap-2 pt-5 border-t-2 border-dark">
         <button
-          onClick={flagCOI}
+          onClick={openCOI}
           disabled={locked}
           className="flex-1 py-3.5 px-5 border border-dark text-[12px] uppercase tracking-[0.06em] font-bold hover:bg-dark hover:text-cream disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -426,6 +454,81 @@ export function ScoringPanel({
           {submitting ? 'Submitting...' : 'Submit evaluation'}
         </button>
       </div>
+
+      {coiOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/75 flex items-center justify-center p-6"
+          onClick={() => !coiSubmitting && setCoiOpen(false)}
+        >
+          <div
+            className="bg-cream max-w-xl w-full border-2 border-dark p-8 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[11px] uppercase tracking-[0.12em] font-bold text-red mb-3">
+              Confirm Conflict of Interest
+            </div>
+            <h2 className="text-[26px] leading-tight mb-4">
+              You're about to flag this initiative as a Conflict of Interest.
+            </h2>
+            <div className="text-[14px] leading-relaxed mb-5">
+              <p className="mb-3">
+                If you confirm, the following will happen:
+              </p>
+              <ul className="list-disc pl-5 space-y-2 mb-3">
+                <li>
+                  <strong>This initiative will be removed from your dashboard</strong> immediately. You will not be expected to score it.
+                </li>
+                <li>
+                  Any draft scores or notes you've already entered for it will be preserved in our records but will not be used in the final tally.
+                </li>
+                <li>
+                  The Awards Lead, <strong>Josefina Nano</strong>, will be notified and will reassign the initiative to another juror to keep coverage at 3 evaluations.
+                </li>
+                <li>
+                  She may reach out to you directly if she needs clarification.
+                </li>
+              </ul>
+              <p>
+                Per the Fab City Awards Confidentiality Policy, jurors are expected to flag a COI whenever they have a personal, professional, or financial relationship with an applicant — or any other reason that may compromise their impartiality.
+              </p>
+            </div>
+
+            <label className="text-[11px] uppercase tracking-[0.08em] font-bold text-muted block mb-1.5">
+              Reason (optional, but helpful for triage)
+            </label>
+            <textarea
+              value={coiReason}
+              onChange={(e) => setCoiReason(e.target.value)}
+              disabled={coiSubmitting}
+              className="w-full min-h-[80px] border border-dark p-2.5 text-[13px] leading-snug bg-white resize-y mb-4"
+              placeholder="e.g., I am a board member of this organization, or I co-authored a publication with the applicant."
+            />
+
+            {coiError && (
+              <div className="border border-red text-red text-[13px] p-3 mb-4">
+                {coiError}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCoiOpen(false)}
+                disabled={coiSubmitting}
+                className="flex-1 py-3 px-5 border border-dark text-[12px] uppercase tracking-[0.06em] font-bold hover:bg-dark hover:text-cream disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCOI}
+                disabled={coiSubmitting}
+                className="flex-1 py-3 px-5 bg-red border border-red text-white text-[12px] uppercase tracking-[0.06em] font-bold hover:bg-dark hover:border-dark disabled:opacity-50"
+              >
+                {coiSubmitting ? 'Flagging...' : 'Yes, flag as COI'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

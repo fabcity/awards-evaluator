@@ -80,6 +80,8 @@ const F = {
   assign_edition: 'fldJpmHgyFVkzYRXY',
   assign_at: 'fldUI4j6QkjGbGf3u',
   assign_evaluation: 'fld3jJf4Y4ggkvM2P',
+  assign_coiFlagged: 'fldDeiS4OU9iUOKGh',
+  assign_coiReason: 'fldI37DRkAzTaHZrC',
 
   // Evaluations
   eval_juror: 'fldHv2tMGVHzv5SVR',
@@ -368,17 +370,50 @@ export async function getAssignmentsForEvaluator(
     if (!subId) return;
     const sub = submissionMap.get(subId);
     if (!sub) return;
+    const status =
+      (selectName(a.fields[F.assign_status]) as Assignment['status']) ??
+      'Not started';
+    // Hide COI-flagged + Reassigned from the evaluator's dashboard.
+    // They still exist in Airtable for the Awards Lead to triage.
+    if (status === 'COI flagged' || status === 'Reassigned') return;
     result.push({
       id: a.id,
       assignmentId: str(a.fields[F.assign_id]) ?? a.id,
-      status:
-        (selectName(a.fields[F.assign_status]) as Assignment['status']) ??
-        'Not started',
+      status,
       assignedAt: str(a.fields[F.assign_at]),
       submission: sub,
     });
   });
   return result;
+}
+
+// Flag this Assignment as a Conflict of Interest. The Awards Lead is
+// alerted via the Airtable status field; an optional reason from the juror
+// helps her triage the reassignment.
+export async function flagAssignmentCOI(
+  evaluatorId: string,
+  assignmentId: string,
+  reason: string | null
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const r = await airtableFetch<AirtableRecord>(
+    `${T.ASSIGNMENTS}/${assignmentId}`
+  );
+  const evaluatorLinks = arr(r.fields[F.assign_evaluator]);
+  if (!evaluatorLinks.includes(evaluatorId)) {
+    return { ok: false, error: 'Not authorized to flag this assignment' };
+  }
+  const fields: Record<string, unknown> = {
+    [F.assign_status]: 'COI flagged',
+    [F.assign_coiFlagged]: true,
+  };
+  if (reason && reason.trim().length > 0) {
+    fields[F.assign_coiReason] = reason.trim();
+  }
+  await airtableFetch(`${T.ASSIGNMENTS}/${assignmentId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ fields, returnFieldsByFieldId: true }),
+  });
+  return { ok: true };
 }
 
 // Find the assignment for (evaluator, submission). Returns null if not authorized.
