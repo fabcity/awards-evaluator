@@ -86,22 +86,33 @@ export default async function DashboardPage() {
 
       <section className="max-w-[1400px] mx-auto px-12 pt-10 pb-20">
         {/* Header */}
-        <div className="flex justify-between items-end border-b-2 border-dark pb-6 mb-8">
+        <div className="flex justify-between items-end border-b-2 border-dark pb-6 mb-8 gap-8">
           <div>
             <div className="text-[11px] uppercase tracking-[0.12em] text-muted font-bold mb-3">
               Your assignments · Fab City Awards 2026
             </div>
             <h1 className="text-[42px] leading-[1.1] tracking-tight">
-              {counts.total} submission{counts.total === 1 ? '' : 's'} to evaluate
+              Hello, {evaluator.fullName.split(' ')[0]}.
               <br />
-              by May 26, 2026.
+              You have {counts.total} submission
+              {counts.total === 1 ? '' : 's'} to evaluate by May 26, 2026.
             </h1>
           </div>
-          <div className="text-right text-[13px]">
+          <div className="text-right text-[13px] shrink-0">
             <div className="text-[34px] font-extrabold leading-none tracking-tight">
               {counts.submitted} / {counts.total}
             </div>
-            <div className="text-muted">completed</div>
+            <div className="text-muted mb-3">completed</div>
+            {counts.inProgress > 0 && (
+              <div className="text-[11px] uppercase tracking-[0.08em] text-blue font-bold">
+                {counts.inProgress} in progress
+              </div>
+            )}
+            {counts.notStarted > 0 && (
+              <div className="text-[11px] uppercase tracking-[0.08em] text-muted font-bold mt-1">
+                {counts.notStarted} not started
+              </div>
+            )}
           </div>
         </div>
 

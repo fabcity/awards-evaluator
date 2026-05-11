@@ -18,7 +18,7 @@ const F = {
   person_email: 'fld74eZhvZoKMVPS1',
   person_territory: 'fldr3LYcNMaqtQX1Z',
   person_status: 'fldB3fx1xvNCpxTij',
-  person_assignments: 'fldZik7EfzBF0v2LW', // reverse link from Assignments.Evaluator
+  person_assignments: 'fldZik7EfzBF0v2LW',
 
   // Submissions
   sub_title: 'fldgIqJS44xkmxgU1',
@@ -48,6 +48,14 @@ type AirtableRecord = {
   fields: Record<string, unknown>;
 };
 
+// Wrap every Airtable URL with returnFieldsByFieldId=true so we can address
+// fields by their stable field ID instead of human-readable name.
+function withFieldIds(path: string): string {
+  return path.includes('?')
+    ? `${path}&returnFieldsByFieldId=true`
+    : `${path}?returnFieldsByFieldId=true`;
+}
+
 async function airtableFetch<T>(
   path: string,
   init: RequestInit = {}
@@ -57,7 +65,7 @@ async function airtableFetch<T>(
       'Missing AIRTABLE_BASE_ID or AIRTABLE_PAT environment variables.'
     );
   }
-  const url = `https://api.airtable.com/v0/${BASE}/${path}`;
+  const url = `https://api.airtable.com/v0/${BASE}/${withFieldIds(path)}`;
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -65,7 +73,6 @@ async function airtableFetch<T>(
       'Content-Type': 'application/json',
       ...(init.headers || {}),
     },
-    // Cache reads for 60 seconds — well inside Airtable signed URL lifetime
     next: { revalidate: 60 },
   });
   if (!res.ok) {
@@ -75,7 +82,6 @@ async function airtableFetch<T>(
   return res.json() as Promise<T>;
 }
 
-// Helper to pull select option name (singleSelect returns {id, name, color})
 function selectName(value: unknown): string | null {
   if (!value) return null;
   if (typeof value === 'object' && value !== null && 'name' in value) {
@@ -99,6 +105,32 @@ function arr(value: unknown): string[] {
 
 function str(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
+}
+
+// Fetch multiple records by ID using a single filterByFormula query
+async function fetchManyById(
+  tableId: string,
+  ids: string[]
+): Promise<AirtableRecord[]> {
+  if (ids.length === 0) return [];
+  const out: AirtableRecord[] = [];
+  // Airtable URL limits: ~16KB. Each RECORD_ID() condition is ~30 chars.
+  // Batch size of 50 is comfortably under the limit and stays well below
+  // Airtable's max page size of 100.
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const conditions = batch.map((id) => `RECORD_ID()='${id}'`).join(',');
+    const formula = `OR(${conditions})`;
+    const params = new URLSearchParams({
+      filterByFormula: formula,
+      pageSize: '100',
+    });
+    const data = await airtableFetch<{ records: AirtableRecord[] }>(
+      `${tableId}?${params}`
+    );
+    out.push(...data.records);
+  }
+  return out;
 }
 
 // -------------------- Public API --------------------
@@ -135,69 +167,42 @@ function mapSubmission(r: AirtableRecord): Submission {
   };
 }
 
-export async function getSubmissionsByIds(
-  ids: string[]
-): Promise<Map<string, Submission>> {
-  if (ids.length === 0) return new Map();
-  // Batch in groups of 10 (Airtable URL length safe limit)
-  const result = new Map<string, Submission>();
-  for (let i = 0; i < ids.length; i += 10) {
-    const batch = ids.slice(i, i + 10);
-    const params = new URLSearchParams();
-    batch.forEach((id) => params.append('records[]', id));
-    const data = await airtableFetch<{ records: AirtableRecord[] }>(
-      `${T.SUBMISSIONS}?${params}`
-    );
-    for (const r of data.records) {
-      result.set(r.id, mapSubmission(r));
-    }
-  }
-  return result;
-}
-
 export async function getAssignmentsForEvaluator(
   evaluatorId: string
 ): Promise<Assignment[]> {
-  // Step 1: load the People record to get linked assignment IDs
+  // 1. Load the People record to get linked assignment IDs (reverse link)
   const person = await airtableFetch<AirtableRecord>(`${T.PEOPLE}/${evaluatorId}`);
   const assignmentIds = arr(person.fields[F.person_assignments]);
   if (assignmentIds.length === 0) return [];
 
-  // Step 2: fetch the assignments
-  const assignmentMap = new Map<string, AirtableRecord>();
-  for (let i = 0; i < assignmentIds.length; i += 10) {
-    const batch = assignmentIds.slice(i, i + 10);
-    const params = new URLSearchParams();
-    batch.forEach((id) => params.append('records[]', id));
-    const data = await airtableFetch<{ records: AirtableRecord[] }>(
-      `${T.ASSIGNMENTS}?${params}`
-    );
-    for (const r of data.records) {
-      assignmentMap.set(r.id, r);
-    }
-  }
+  // 2. Fetch those assignments
+  const allAssignments = await fetchManyById(T.ASSIGNMENTS, assignmentIds);
 
-  // Step 3: filter to 2026 edition and collect linked submission IDs
+  // 3. Filter to current edition + collect linked submission IDs
   const submissionIds = new Set<string>();
-  const filteredAssignments: AirtableRecord[] = [];
-  Array.from(assignmentMap.values()).forEach((a) => {
+  const filtered: AirtableRecord[] = [];
+  allAssignments.forEach((a) => {
     const editionLinks = arr(a.fields[F.assign_edition]);
     if (!editionLinks.includes(EDITION_2026)) return;
-    filteredAssignments.push(a);
-    const subLinks = arr(a.fields[F.assign_submission]);
-    subLinks.forEach((id) => submissionIds.add(id));
+    filtered.push(a);
+    arr(a.fields[F.assign_submission]).forEach((id) => submissionIds.add(id));
   });
 
-  // Step 4: batch-fetch submissions
-  const submissions = await getSubmissionsByIds(Array.from(submissionIds));
+  // 4. Fetch the linked submissions
+  const submissionRecords = await fetchManyById(
+    T.SUBMISSIONS,
+    Array.from(submissionIds)
+  );
+  const submissionMap = new Map<string, Submission>();
+  submissionRecords.forEach((r) => submissionMap.set(r.id, mapSubmission(r)));
 
-  // Step 5: assemble
+  // 5. Stitch the result together
   const result: Assignment[] = [];
-  for (const a of filteredAssignments) {
+  filtered.forEach((a) => {
     const subId = arr(a.fields[F.assign_submission])[0];
-    if (!subId) continue;
-    const sub = submissions.get(subId);
-    if (!sub) continue;
+    if (!subId) return;
+    const sub = submissionMap.get(subId);
+    if (!sub) return;
     result.push({
       id: a.id,
       assignmentId: str(a.fields[F.assign_id]) ?? a.id,
@@ -207,6 +212,6 @@ export async function getAssignmentsForEvaluator(
       assignedAt: str(a.fields[F.assign_at]),
       submission: sub,
     });
-  }
+  });
   return result;
 }
