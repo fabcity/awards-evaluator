@@ -94,8 +94,17 @@ export default async function DashboardPage() {
             <h1 className="text-[42px] leading-[1.1] tracking-tight">
               Hello, {evaluator.fullName.split(' ')[0]}.
               <br />
-              You have {counts.total} submission
-              {counts.total === 1 ? '' : 's'} to evaluate by May 26, 2026.
+              {counts.total === 0 ? (
+                <>No assignments yet. You'll be notified when yours arrive.</>
+              ) : counts.total - counts.submitted === 0 ? (
+                <>You've completed all your evaluations. Thank you.</>
+              ) : (
+                <>
+                  You have {counts.total - counts.submitted} submission
+                  {counts.total - counts.submitted === 1 ? '' : 's'} to evaluate
+                  by May 26, 2026.
+                </>
+              )}
             </h1>
           </div>
           <div className="text-right text-[13px] shrink-0">
