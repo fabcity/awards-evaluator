@@ -140,10 +140,10 @@ async function airtableFetch<T>(
       'Content-Type': 'application/json',
       ...(init.headers || {}),
     },
-    // Don't cache writes; for reads, 60s is safe
-    cache: init.method && init.method !== 'GET' ? 'no-store' : undefined,
-    next:
-      !init.method || init.method === 'GET' ? { revalidate: 60 } : undefined,
+    // Always fetch fresh from Airtable so saved evaluations show up
+    // immediately when the juror reopens the page. Performance impact
+    // is negligible at our scale (32 jurors).
+    cache: 'no-store',
   });
   if (!res.ok) {
     const body = await res.text();
