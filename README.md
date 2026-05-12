@@ -19,6 +19,7 @@ Private evaluation platform for the Fab City Awards 2026 jury.
 | **v0.2** | Magic-link auth + evaluator dashboard with real Airtable data |
 | v0.3 | Submission detail view + scoring panel with autosave |
 | v0.4 | Submit flow + final polish |
+| v0.5 | /guide page (Awards 2026 jury guide, brand-locked) + dashboard link 
 
 ## Env vars
 
