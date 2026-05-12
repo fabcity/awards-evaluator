@@ -23,3 +23,29 @@ h1, h2, h3, h4 {
   font-weight: 800;
   letter-spacing: -0.02em;
 }
+
+/* ──────── Print stylesheet ────────
+   Used for the Jury Guide (/guide). Cmd+P → Save as PDF should produce a
+   clean branded export: no sticky header, no nav, full-bleed content,
+   black ink on cream paper. */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+  }
+  html, body {
+    background: #F7F5F1 !important;
+    color: #1E1E1E !important;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+  /* Encourage browsers to keep brand colors (Chrome/Edge) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  a { color: inherit !important; text-decoration: none !important; }
+  /* Section headings start a fresh page */
+  section[id] { break-before: page; page-break-before: always; }
+  section#quick-start { break-before: auto; page-break-before: auto; }
+}

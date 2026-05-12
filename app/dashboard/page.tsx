@@ -71,6 +71,12 @@ export default async function DashboardPage() {
           </span>
         </div>
         <div className="flex items-center gap-3.5 text-[13px]">
+          <a
+            href="/guide"
+            className="text-[11px] uppercase tracking-widest font-bold text-cream hover:text-red mr-2"
+          >
+            Jury Guide →
+          </a>
           <span className="w-[30px] h-[30px] bg-green text-white flex items-center justify-center font-bold text-xs">
             {initials || 'E'}
           </span>
@@ -102,7 +108,7 @@ export default async function DashboardPage() {
                 <>
                   You have {counts.total - counts.submitted} submission
                   {counts.total - counts.submitted === 1 ? '' : 's'} to evaluate
-                  by May 26, 2026.
+                  by June 7, 2026.
                 </>
               )}
             </h1>
@@ -221,7 +227,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <div className="mt-12 p-6 bg-dark text-cream flex justify-between items-center">
+        <div className="mt-12 p-6 bg-dark text-cream flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>
             <div className="text-[11px] uppercase tracking-[0.12em] font-bold opacity-70 mb-2">
               Need help?
@@ -231,6 +237,12 @@ export default async function DashboardPage() {
               Technical / platform issues: Lucas Marangoni (luc@fab.city).
             </div>
           </div>
+          <a
+            href="/guide"
+            className="shrink-0 bg-red text-white font-bold uppercase tracking-[0.08em] text-[12px] px-5 py-3 hover:bg-cream hover:text-dark transition-colors"
+          >
+            Read the Jury Guide →
+          </a>
         </div>
       </section>
     </main>

@@ -391,7 +391,7 @@ export function ScoringPanel({
             <div className="text-[13px] font-bold">Nominate for Overall Impact Award</div>
             <div className="text-[11.5px] text-muted">
               Check only if this submission integrates NATURE, COMMUNITY and TECHNOLOGY exceptionally.
-              Final selection is decided in the jury Zoom session — not scored separately.
+              Final selection is decided in the jury online session — not scored separately.
             </div>
           </div>
         </label>
